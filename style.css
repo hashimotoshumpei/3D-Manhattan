@@ -1,0 +1,269 @@
+/* =========================================================
+   Global
+========================================================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+               "Inter", "Helvetica Neue", Arial, sans-serif;
+  background: #f5f7fb;
+  color: #1f2937;
+  overflow: hidden;
+}
+
+/* =========================================================
+   Layout
+========================================================= */
+#container {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: row;
+}
+
+/* =========================================================
+   Sidebar (Controls)
+========================================================= */
+#controls {
+  width: 320px;
+  min-width: 320px;
+  height: 100vh;
+  padding: 14px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  overflow-y: auto;
+
+  background: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    #f3f4f6 100%
+  );
+
+  border-right: 1px solid #e5e7eb;
+  box-shadow: 2px 0 8px rgba(0,0,0,0.04);
+}
+
+/* =========================================================
+   Sidebar Logo
+========================================================= */
+#sidebarLogo {
+  margin: -14px -14px 8px -14px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #ffffff;
+}
+
+#sidebarLogo img {
+  width: 100%;
+  height: auto;
+  max-height: 64px;
+  object-fit: contain;
+  display: block;
+}
+
+/* =========================================================
+   Control Groups
+========================================================= */
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+}
+
+label {
+  opacity: 0.75;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* =========================================================
+   Inputs
+========================================================= */
+input,
+select,
+button {
+  font-size: 13px;
+  border-radius: 6px;
+}
+
+input,
+select {
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37,99,235,0.15);
+}
+
+input[type="range"] {
+  padding: 0;
+}
+
+/* =========================================================
+   Buttons
+========================================================= */
+button {
+  padding: 8px 12px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+
+  background: linear-gradient(
+    180deg,
+    #3b82f6 0%,
+    #2563eb 100%
+  );
+  color: #ffffff;
+
+  box-shadow:
+    0 1px 2px rgba(0,0,0,0.15),
+    inset 0 1px 0 rgba(255,255,255,0.25);
+
+  transition:
+    transform 0.08s ease,
+    box-shadow 0.08s ease,
+    background 0.15s ease;
+}
+
+button:hover {
+  background: linear-gradient(
+    180deg,
+    #4f8df9 0%,
+    #2563eb 100%
+  );
+}
+
+button:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 1px rgba(0,0,0,0.15);
+}
+
+/* =========================================================
+   Canvas (3D)
+========================================================= */
+#canvas {
+  flex: 1;
+  display: block;
+  background: #ffffff;
+  cursor: grab;
+}
+
+#canvas:active {
+  cursor: grabbing;
+}
+
+/* =========================================================
+   Info Bar
+========================================================= */
+#info {
+  font-size: 12px;
+  display: flex;
+  gap: 14px;
+  color: #374151;
+}
+
+/* =========================================================
+   Right Panel (2D Manhattan)
+========================================================= */
+#panel2d {
+  width: 360px;
+  min-width: 360px;
+  height: 100vh;
+
+  overflow-y: auto;
+  padding: 10px;
+
+  background: linear-gradient(
+    180deg,
+    #fafafa 0%,
+    #f3f4f6 100%
+  );
+
+  border-left: 1px solid #e5e7eb;
+  box-shadow: -2px 0 8px rgba(0,0,0,0.04);
+}
+
+/* =========================================================
+   2D Manhattan Blocks
+========================================================= */
+.manhattan2d {
+  margin-bottom: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.manhattan2d canvas {
+  width: 100%;
+  height: 180px;
+  display: block;
+
+  background: #ffffff;
+  border-radius: 6px;
+
+  box-shadow:
+    0 1px 3px rgba(0,0,0,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.6);
+}
+
+/* =========================================================
+   Drag & Drop File Input
+========================================================= */
+
+.drop-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 14px;
+  border: 2px dashed #9ca3af;
+  border-radius: 8px;
+
+  background: #f9fafb;
+  cursor: pointer;
+  text-align: center;
+
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.drop-zone:hover {
+  background: #eef2ff;
+  border-color: #2563eb;
+}
+
+.drop-zone.dragover {
+  background: #e0e7ff;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37,99,235,0.15);
+}
+
+.drop-zone-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  line-height: 1.4;
+}
+
+/* ファイル選択状態の表示（既存を少し強調） */
+.file-status {
+  font-size: 12px;
+  color: #374151;
+  opacity: 0.85;
+}

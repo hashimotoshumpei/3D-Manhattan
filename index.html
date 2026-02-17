@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GWAS 3D Manhattan Viewer (Chromosome-length based)</title>
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+<div id="container">
+  <div id="controls">
+    <div id="sidebarLogo">
+  <img src="logo.png" alt="3D Manhattan">
+</div>
+
+<div class="control-group">
+  <label>Input GWAS result files (TSV)</label>
+
+  <!-- Drag & Drop zone -->
+  <div id="dropZone" class="drop-zone">
+    <div class="drop-zone-text">
+      Drag & drop files here<br>
+      or click to select
+    </div>
+
+    <!-- 実体（既存の csvInput をそのまま使う） -->
+    <input
+      type="file"
+      id="csvInput"
+      accept=".csv,.txt"
+      multiple
+      hidden
+    >
+  </div>
+
+  <!-- 状態表示 -->
+  <div id="fileStatus" class="file-status">
+    No files selected
+  </div>
+</div>
+
+
+
+
+
+    <div class="control-group" id="chrFilter">
+        <label>Chromosomes to display</label>
+        <!-- JSでチェックボックスを自動生成 -->
+
+    </div>
+
+      <div class="control-group">
+    <label>Datasets (order / visibility)</label>
+    <div id="datasetList"></div>
+  </div>
+
+        <button id="renderBtn">Render</button>
+    <div id="info">
+      <div>Number of files: <span id="csvCount">0</span></div>
+      <div>Number of total variants: <span id="snpCount">0</span></div>
+    </div>
+
+    <div class="control-group">
+      <label>Stack Spacing</label>
+      <input type="range" id="zSpacing" min="20" max="200" step="5" value="30">
+    </div>
+    <div class="control-group">
+      <label>Point Size</label>
+      <input type="range" id="pointSize" min="1" max="8" step="0.5" value="5">
+    </div>
+    <div class="control-group">
+      <label>Y-axis Scale</label>
+      <input type="range" id="yScale" min="0.2" max="15" step="0.1" value="10">
+    </div>
+    <div class="control-group">
+      <label>Axis Offset</label>
+      <input type="range" id="axisOffset" min="1" max="15" step="0.5" value="1">
+    </div>
+    <div class="control-group">
+      <label>Axis Label Size</label>
+      <input type="range" id="labelSize" min="6" max="40" step="2" value="10">
+    </div>
+    <div class="control-group">
+      <label>Axis-Label Distance</label>
+      <input type="range" id="labelOffset" min="0" max="10" step="0.5" value="5">
+    </div>
+    <div class="control-group">
+      <label>Odd Chromosome Color</label>
+      <input type="color" id="oddColor" value="#7DC97B">
+    </div>
+    <div class="control-group">
+      <label>Even Chromosome Color</label>
+      <input type="color" id="evenColor" value="#CAECA6">
+    </div>
+    <div class="control-group">
+      <label>Threshold Line</label>
+      <input type="number" id="lodLine" value="3" step="0.1">
+    </div>
+
+   
+
+
+
+
+    <div class="control-group">
+  <label>Highlight region</label>
+  <select id="regionChr">
+    <option value="">Select chromosome</option>
+  </select>
+  <input type="number" id="regionStart" placeholder="Start BP">
+  <input type="number" id="regionEnd" placeholder="End BP">
+  <input type="color" id="regionColor" value="#e11d48">
+
+<label>
+  <input type="checkbox" id="drawLines">
+  Connect variants
+</label>
+
+
+  <input type="color" id="lineColor" value="#10b981">
+
+
+
+
+
+
+</div>
+
+ <div class="control-group">
+  <label>Export 3D view as 2D</label>
+  <select id="exportFormat">
+    <option value="png">PNG</option>
+    <option value="jpg">JPG</option>
+    <option value="pdf">PDF</option>
+    <option value="svg">SVG</option>
+  </select>
+  <button id="exportBtn">Export</button>
+</div>
+
+
+  </div>
+
+  <canvas id="canvas"></canvas>
+  <div id="panel2d"></div>
+</div>
+
+
+
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="script.js"></script>
+
+</body>
+</html>
