@@ -4,4 +4,4 @@
 
 
 
-# Let's render your Manhattan-plots in 3D space!!
+# Let's render your Manhattan-plots in 3D space !
