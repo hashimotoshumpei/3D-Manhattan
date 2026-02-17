@@ -7,6 +7,9 @@
 # Let's render your Manhattan plots in 3D space !
 3D-Manhattan, an interactive visualization framework that integrates multiple GWAS results within a unified three-dimensional (3D) coordinate system. By extending the conventional Manhattan plot with an additional axis representing time, trait, or condition, 3D-Manhattan enables simultaneous, axis-aligned comparison of association landscapes while preserving genomic coordinates and statistical values. Implemented as a browser-based, stand-alone tool using WebGL-based rendering, 3D-Manhattan supports smooth interaction without server-side computation. The framework provides flexible visualization controls, region highlighting, and variant-level correspondence across datasets, facilitating exploratory analysis of stable and context-dependent genetic associations. Collectively, 3D-Manhattan addresses a key limitation of conventional GWAS visualization and offers a generalizable approach for multi-dimensional association data analysis.
 
+### Citation
+Hashimoto (2026), in preparing.
+
 <p align="center">
   <img src="images/main.png">
 </p>
