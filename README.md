@@ -14,6 +14,9 @@ Hashimoto (2026), in preparing.
   <img src="images/main.png">
 </p>
 
+# Quick Start
+Clone this repository and open `index.html` in your web browser to start using the tool.
+
 # How to use ?
 3D-Manhattan accept following format;
 | SNP    | CHR |   BP |         P |
