@@ -63,7 +63,7 @@
 
     <div class="control-group">
       <label>Stack Spacing</label>
-      <input type="range" id="zSpacing" min="20" max="200" step="5" value="30">
+      <input type="range" id="zSpacing" min="5 max="200" step="5" value="30">
     </div>
     <div class="control-group">
       <label>Point Size</label>
@@ -95,7 +95,37 @@
     </div>
     <div class="control-group">
       <label>Threshold Line</label>
-      <input type="number" id="lodLine" value="3" step="0.1">
+      <input type="number" id="lodLine" value="0" step="0.1">
+    </div>
+
+    <div class="control-group">
+      <label>Threshold Highlight</label>
+      <label class="inline-option">
+        <input type="checkbox" id="useThresholdHighlight">
+        Highlight markers above threshold
+      </label>
+      <input type="color" id="thresholdHighlightColor" value="#ff4d6d">
+    </div>
+
+
+    <div class="control-group">
+      <label>SNP ID Highlight</label>
+      <label class="inline-option">
+        <input type="checkbox" id="useSnpIdHighlight">
+        Highlight specified SNP IDs
+      </label>
+      <textarea id="snpIdList" rows="4" placeholder="Enter SNP IDs (comma, tab, space, or newline separated)"></textarea>
+      <input type="color" id="snpIdHighlightColor" value="#8b5cf6">
+    </div>
+
+
+    <div class="control-group">
+      <label>View Pan (vertical)</label>
+      <input type="range" id="panVertical" min="-1000" max="1000" step="1" value="0">
+    </div>
+    <div class="control-group">
+      <label>View Pan (horizontal)</label>
+      <input type="range" id="panHorizontal" min="-1000" max="1000" step="1" value="0">
     </div>
 
    
@@ -154,4 +184,4 @@
 <script src="script.js"></script>
 
 </body>
-</html>
+</html>>

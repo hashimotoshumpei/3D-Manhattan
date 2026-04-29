@@ -1,4 +1,3 @@
-
 // ===== Global shared objects =====
 let globalState = {};
 let globalAllPoints = [];
@@ -97,6 +96,15 @@ const camera = new THREE.PerspectiveCamera(
 );
 camera.position.set(0,20, 220);
 
+const baseCameraPosition = { x: 0, y: 20, z: 220 };
+const cameraPanState = { horizontal: 0, vertical: 0 };
+
+function applyCameraPan(){
+  const panScale = Math.max(20, camera.position.z * 0.35);
+  camera.position.x = baseCameraPosition.x + (cameraPanState.horizontal / 100) * panScale;
+  camera.position.y = baseCameraPosition.y - (cameraPanState.vertical / 100) * panScale;
+}
+
 const renderer = new THREE.WebGLRenderer({
   canvas,
   antialias: true,
@@ -154,6 +162,66 @@ void main(){
 
 
 
+
+function getThresholdHighlightSettings(){
+  return {
+    enabled: !!document.getElementById("useThresholdHighlight")?.checked,
+    color: new THREE.Color(
+      document.getElementById("thresholdHighlightColor")?.value || "#ff4d6d"
+    )
+  };
+}
+
+function parseSnpIdInput(text){
+  return new Set(
+    String(text || "")
+      .split(/[\s,]+/)
+      .map(s => s.trim())
+      .filter(Boolean)
+  );
+}
+
+function getSnpIdHighlightSettings(){
+  const ids = parseSnpIdInput(
+    document.getElementById("snpIdList")?.value || ""
+  );
+
+  return {
+    enabled: !!document.getElementById("useSnpIdHighlight")?.checked && ids.size > 0,
+    ids,
+    color: new THREE.Color(
+      document.getElementById("snpIdHighlightColor")?.value || "#8b5cf6"
+    )
+  };
+}
+
+function resolveMarkerColor(marker, oddColor, evenColor, state = globalState){
+  let color = (marker.chr % 2 === 1) ? oddColor : evenColor;
+
+  const thresholdHighlight = state?.thresholdHighlight || getThresholdHighlightSettings();
+  const snpIdHighlight = state?.snpIdHighlight || getSnpIdHighlightSettings();
+  const thresholdValue = Number.isFinite(state?.lodLine)
+    ? state.lodLine
+    : +document.getElementById("lodLine").value;
+
+  if(thresholdHighlight.enabled && marker.lod >= thresholdValue){
+    color = thresholdHighlight.color;
+  }
+
+  if(snpIdHighlight.enabled && marker.snp && snpIdHighlight.ids.has(marker.snp)){
+    color = snpIdHighlight.color;
+  }
+
+  if(state?.region &&
+     marker.chr === state.region.chr &&
+     marker.bp >= state.region.start &&
+     marker.bp <= state.region.end){
+    color = state.region.color;
+  }
+
+  return color;
+}
+
 /* ================= CSV ================= */
 
 function parseCSV(text){
@@ -161,6 +229,7 @@ function parseCSV(text){
   const header = lines[0].split("\t"); // ← タブ区切りなら "\t"
   
   const idx = {
+    snp: header.indexOf("SNP"),
     chr: header.indexOf("CHR"),
     bp:  header.indexOf("BP"),
     p:   header.indexOf("P")
@@ -171,6 +240,7 @@ function parseCSV(text){
     const pval = parseFloat(f[idx.p]);
 
     return {
+      snp: idx.snp >= 0 ? String(f[idx.snp]).trim() : "",
       chr: parseInt(f[idx.chr]),
       bp:  parseFloat(f[idx.bp]),
       lod: pval
@@ -388,7 +458,7 @@ function draw2DManhattan(container, dataset, index, state, filename) {
 
 
   // ===== 2D 用：3D の 0.6 倍の軸ラベルサイズ =====
-  const labelSize2D = labelSize * 0.3;
+  const labelSize2D = 6;
 
 
   const plotW = W - PAD_L - PAD_R;
@@ -434,7 +504,7 @@ function draw2DManhattan(container, dataset, index, state, filename) {
 
     ctx.textAlign = "right";
     ctx.textBaseline = "middle";
-    ctx.fillText(l, PAD_L - 8 - labelOffset*4, y);
+    ctx.fillText(l, PAD_L - 8, y);
   }
 
   /* ===== LOD line ===== */
@@ -462,7 +532,7 @@ function draw2DManhattan(container, dataset, index, state, filename) {
 
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.fillText(`Chr${chr}`, chrCenter, H-PAD_B + 6 + labelOffset*4);
+    ctx.fillText(`Chr${chr}`, chrCenter, H-PAD_B + 6);
   });
 
   /* ===== SNP ===== */
@@ -472,18 +542,7 @@ dataset.forEach(p=>{
   const x = PAD_L + (chrOffsetsSelected[p.chr] + p.bp) * BP_SCALE * xScale;
   const y = H - PAD_B - p.lod * yScale * yScalePx;
 
-  // ---- 基本色 ----
-  let color = (p.chr % 2 === 1)
-    ? oddColor.getStyle()
-    : evenColor.getStyle();
-
-  // ---- Region 強調 ----
-  if(state.region &&
-     p.chr === state.region.chr &&
-     p.bp >= state.region.start &&
-     p.bp <= state.region.end){
-    color = state.region.color.getStyle();
-  }
+  let color = resolveMarkerColor(p, oddColor, evenColor, state).getStyle();
 
   ctx.fillStyle = color;
   ctx.beginPath();
@@ -654,16 +713,7 @@ function applyStyle(){
   const meta = points.userData.meta;
 
  meta.forEach((m,i)=>{
-  let c = (m.chr % 2 === 1) ? oddColor : evenColor;
-
-  // ★ Region があれば最優先
-  if(globalState.region &&
-     m.chr === globalState.region.chr &&
-     m.bp >= globalState.region.start &&
-     m.bp <= globalState.region.end){
-    c = globalState.region.color;
-  }
-
+  const c = resolveMarkerColor(m, oddColor, evenColor, globalState);
   colAttr.setXYZ(i, c.r, c.g, c.b);
 });
 colAttr.needsUpdate = true;
@@ -703,6 +753,8 @@ colAttr.needsUpdate = true;
   globalState.lodLine = lodLine;
   globalState.oddColor = oddColor;
   globalState.evenColor = evenColor;
+  globalState.thresholdHighlight = getThresholdHighlightSettings();
+  globalState.snpIdHighlight = getSnpIdHighlightSettings();
 
   drawAxes(
     globalActiveDatasets.length,
@@ -805,6 +857,8 @@ globalState = {
   yScale,
   oddColor,
   evenColor,
+  thresholdHighlight: getThresholdHighlightSettings(),
+  snpIdHighlight: getSnpIdHighlightSettings(),
 
   labelSize,
   axisOffset,
@@ -863,12 +917,12 @@ activeDatasets.forEach((ds,d)=>{
       pos[i*3+1] = p.lod * yScale;
       pos[i*3+2] = z;
 
-      const c = (p.chr % 2 === 1) ? oddColor : evenColor;
+      const c = resolveMarkerColor(p, oddColor, evenColor, globalState);
       col[i*3] = c.r;
       col[i*3+1] = c.g;
       col[i*3+2] = c.b;
 
-      meta.push({ chr: p.chr, bp: p.bp, lod: p.lod });  // ←【追加】
+      meta.push({ snp: p.snp, chr: p.chr, bp: p.bp, lod: p.lod });  // ←【追加】
       i++;
     });
   });
@@ -980,15 +1034,63 @@ function applyRegionOnly(){
     const geom = new THREE.BufferGeometry().setFromPoints(
       list.map(p=>new THREE.Vector3(p.x,p.y,p.z))
     );
-    lineGroup.add(
-      new THREE.Line(
-        geom,
-        new THREE.LineBasicMaterial({ color: lineColor })
-      )
-    );
+const curve = new THREE.CatmullRomCurve3(
+  list.map(p => new THREE.Vector3(p.x, p.y, p.z))
+);
+
+// ===== drawLines の太さはここ =====
+const radius = 0.2;   // ← 太さ（Mb スケールに応じて調整）
+const tubeGeom = new THREE.TubeGeometry(
+  curve,
+  64,    // segments
+  radius,
+  8,     // radial segments
+  false
+);
+
+const tubeMat = new THREE.MeshBasicMaterial({
+  color: lineColor
+});
+
+lineGroup.add(new THREE.Mesh(tubeGeom, tubeMat));
   });
 }
 
+
+
+document.getElementById("panVertical").addEventListener("input", (e)=>{
+  cameraPanState.vertical = +e.target.value;
+  applyCameraPan();
+});
+
+document.getElementById("panHorizontal").addEventListener("input", (e)=>{
+  cameraPanState.horizontal = +e.target.value;
+  applyCameraPan();
+});
+
+
+[
+  "lodLine",
+  "useThresholdHighlight",
+  "thresholdHighlightColor",
+  "useSnpIdHighlight",
+  "snpIdHighlightColor",
+  "snpIdList"
+].forEach(id=>{
+  const el = document.getElementById(id);
+  if(!el) return;
+
+  const eventName = (el.type === "checkbox" || el.type === "color")
+    ? "change"
+    : (el.tagName === "TEXTAREA" ? "input" : "input");
+
+  el.addEventListener(eventName, ()=>{
+    if(!points || !geometry) return;
+    applyStyle();
+  });
+});
+
+applyCameraPan();
 
 
 
@@ -1015,6 +1117,7 @@ canvas.addEventListener("wheel",e=>{
   e.preventDefault();
   camera.position.z += e.deltaY * 0.3;
   camera.position.z = Math.max(40, Math.min(2000, camera.position.z));
+  applyCameraPan();
 },{ passive:false });
 
 function animate(){
@@ -1110,3 +1213,117 @@ function exportRaster(format){
 
   renderer.render(scene, camera);
 }
+
+/* ================= hover tooltip for SNP / P value ================= */
+
+// ツールチップ本体をJSで生成（HTML/CSSは変更しない）
+const hoverTooltip = document.createElement("div");
+hoverTooltip.style.position = "fixed";
+hoverTooltip.style.zIndex = "9999";
+hoverTooltip.style.pointerEvents = "none";
+hoverTooltip.style.padding = "8px 10px";
+hoverTooltip.style.borderRadius = "8px";
+hoverTooltip.style.background = "rgba(17, 24, 39, 0.92)";
+hoverTooltip.style.color = "#ffffff";
+hoverTooltip.style.fontSize = "12px";
+hoverTooltip.style.lineHeight = "1.45";
+hoverTooltip.style.boxShadow = "0 4px 14px rgba(0,0,0,0.18)";
+hoverTooltip.style.whiteSpace = "nowrap";
+hoverTooltip.style.display = "none";
+document.body.appendChild(hoverTooltip);
+
+// Raycaster
+const hoverRaycaster = new THREE.Raycaster();
+const hoverMouse = new THREE.Vector2();
+
+// 点群のヒット判定のしやすさ
+hoverRaycaster.params.Points.threshold = 3.5;
+
+// hover中はドラッグ回転と干渉させないため、最後に当たったindexを保持
+let hoveredPointIndex = -1;
+
+function formatPValue(v){
+  if (v === null || v === undefined || Number.isNaN(v)) return "NA";
+  // 非常に小さい値にも対応
+  if (Math.abs(v) < 1e-4 || Math.abs(v) >= 1e4) {
+    return Number(v).toExponential(3);
+  }
+  return String(v);
+}
+
+function showHoverTooltip(clientX, clientY, meta){
+  hoverTooltip.innerHTML = `
+    <div><strong>Marker</strong>: ${meta.snp || "(no SNP ID)"}</div>
+    <div><strong>P</strong>: ${formatPValue(meta.lod)}</div>
+    <div><strong>Chr</strong>: ${meta.chr}</div>
+    <div><strong>BP</strong>: ${meta.bp}</div>
+  `;
+
+  const offsetX = 14;
+  const offsetY = 14;
+  hoverTooltip.style.left = `${clientX + offsetX}px`;
+  hoverTooltip.style.top  = `${clientY + offsetY}px`;
+  hoverTooltip.style.display = "block";
+}
+
+function hideHoverTooltip(){
+  hoverTooltip.style.display = "none";
+  hoveredPointIndex = -1;
+}
+
+canvas.addEventListener("mousemove", (e) => {
+  // 点がまだ無ければ何もしない
+  if (!points || !geometry || !points.userData?.meta) {
+    hideHoverTooltip();
+    return;
+  }
+
+  // ドラッグ中はツールチップ非表示
+  if (drag) {
+    hideHoverTooltip();
+    return;
+  }
+
+  const rect = canvas.getBoundingClientRect();
+
+  hoverMouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  hoverMouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+  hoverRaycaster.setFromCamera(hoverMouse, camera);
+
+  const intersects = hoverRaycaster.intersectObject(points);
+
+  if (!intersects || intersects.length === 0) {
+    hideHoverTooltip();
+    return;
+  }
+
+  const hit = intersects[0];
+  const idx = hit.index;
+
+  if (idx === undefined || idx === null) {
+    hideHoverTooltip();
+    return;
+  }
+
+  const meta = points.userData.meta[idx];
+  if (!meta) {
+    hideHoverTooltip();
+    return;
+  }
+
+  hoveredPointIndex = idx;
+  showHoverTooltip(e.clientX, e.clientY, meta);
+});
+
+canvas.addEventListener("mouseleave", () => {
+  hideHoverTooltip();
+});
+
+canvas.addEventListener("mousedown", () => {
+  hideHoverTooltip();
+});
+
+window.addEventListener("scroll", () => {
+  hideHoverTooltip();
+});
