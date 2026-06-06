@@ -15,6 +15,16 @@
 </div>
 
 <div class="control-group">
+  <label>Appearance</label>
+  <label class="theme-switch">
+    <input type="checkbox" id="themeToggle">
+    <span class="theme-slider" aria-hidden="true"></span>
+    <span class="theme-switch-text">Dark mode</span>
+  </label>
+</div>
+
+
+<div class="control-group">
   <label>Input GWAS result files (TSV)</label>
 
   <!-- Drag & Drop zone -->
@@ -133,29 +143,35 @@
 
 
 
-    <div class="control-group">
-  <label>Highlight region</label>
-  <select id="regionChr">
-    <option value="">Select chromosome</option>
-  </select>
-  <input type="number" id="regionStart" placeholder="Start BP">
-  <input type="number" id="regionEnd" placeholder="End BP">
-  <input type="color" id="regionColor" value="#e11d48">
-
-<label>
-  <input type="checkbox" id="drawLines">
-  Connect variants
-</label>
-
-
-  <input type="color" id="lineColor" value="#10b981">
-
-
-
-
-
-
-</div>
+    <div class="control-group" id="regionHighlightControl">
+      <label>Highlight regions</label>
+      <div id="regionList">
+        <div class="region-row">
+          <div class="region-row-header">
+            <span class="region-row-title">Region 1</span>
+            <button type="button" class="removeRegionBtn" title="Remove this region">−</button>
+          </div>
+          <select id="regionChr" class="regionChr">
+            <option value="">Select chromosome</option>
+          </select>
+          <input type="number" id="regionStart" class="regionStart" placeholder="Start BP">
+          <input type="number" id="regionEnd" class="regionEnd" placeholder="End BP">
+          <label class="inline-option">
+            Region color
+            <input type="color" id="regionColor" class="regionColor" value="#e11d48">
+          </label>
+          <label class="inline-option">
+            <input type="checkbox" id="drawLines" class="drawLines">
+            Connect variants
+          </label>
+          <label class="inline-option">
+            Line color
+            <input type="color" id="lineColor" class="lineColor" value="#10b981">
+          </label>
+        </div>
+      </div>
+      <button type="button" id="addRegionBtn">＋ Add region</button>
+    </div>
 
  <div class="control-group">
   <label>Export 3D view as 2D</label>

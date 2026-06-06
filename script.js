@@ -76,7 +76,7 @@ document.getElementById("csvInput").addEventListener("change", async (e)=>{
       order: i
     });
   }
-  globalState.region = null;
+  globalState.regions = [];
   buildDatasetUI();
 });
 
@@ -86,7 +86,69 @@ const EXPORT_SCALE = 3;
 
 const canvas = document.getElementById("canvas");
 const scene = new THREE.Scene();
-scene.background = new THREE.Color("#ffffff");
+
+function getThemeSettings(){
+  const mode = document.getElementById("themeToggle")?.checked ? "dark" : "light";
+  if(mode === "dark"){
+    return {
+      mode,
+      sceneBackground: "#0f172a",
+      panelBackground: "#111827",
+      plotBackground: "#0f172a",
+      axisColor: "#e5e7eb",
+      textColor: "#f9fafb",
+      titleBackground: "rgba(15,23,42,0.86)",
+      thresholdLineColor: "#f87171"
+    };
+  }
+  return {
+    mode,
+    sceneBackground: "#ffffff",
+    panelBackground: "#f5f7fb",
+    plotBackground: "#ffffff",
+    axisColor: "#000000",
+    textColor: "#000000",
+    titleBackground: "rgba(255,255,255,0.85)",
+    thresholdLineColor: "#ff0000"
+  };
+}
+
+function applyTheme(){
+  const theme = getThemeSettings();
+  document.body.dataset.theme = theme.mode;
+  scene.background = new THREE.Color(theme.sceneBackground);
+  if(globalState) globalState.theme = theme;
+}
+
+function refreshThemeOnly(){
+  applyTheme();
+  if(!points || !geometry || !globalState || !globalActiveDatasets.length) return;
+
+  const theme = getThemeSettings();
+  globalState.theme = theme;
+
+  drawAxes(
+    globalActiveDatasets.length,
+    globalState.zSpacing || +document.getElementById("zSpacing").value,
+    globalState.labelSize,
+    globalState.axisOffset,
+    globalState.labelOffset,
+    globalState.chrMax,
+    globalState.chrOffsetsSelected,
+    globalState.totalLengthSelected,
+    globalState.BP_SCALE,
+    globalState.yScale,
+    globalState.lodLine
+  );
+
+  const panel2d = document.getElementById("panel2d");
+  panel2d.innerHTML = "";
+  globalActiveDatasets.forEach(ds=>{
+    draw2DManhattan(panel2d, ds.data, 0, globalState, ds.name);
+  });
+}
+
+applyTheme();
 
 const camera = new THREE.PerspectiveCamera(
   75,
@@ -212,14 +274,126 @@ function resolveMarkerColor(marker, oddColor, evenColor, state = globalState){
     color = snpIdHighlight.color;
   }
 
-  if(state?.region &&
-     marker.chr === state.region.chr &&
-     marker.bp >= state.region.start &&
-     marker.bp <= state.region.end){
-    color = state.region.color;
+  const regions = state?.regions || getRegionHighlightSettings();
+  for(const region of regions){
+    if(marker.chr === region.chr &&
+       marker.bp >= region.start &&
+       marker.bp <= region.end){
+      color = region.color;
+    }
   }
 
   return color;
+}
+
+
+/* ================= multiple region highlights ================= */
+
+function getRegionOptionHTML(chrMax = globalState.chrMax || {}){
+  const options = ['<option value="">Select chromosome</option>'];
+  Object.keys(chrMax)
+    .map(Number)
+    .sort((a,b)=>a-b)
+    .forEach(chr=>{
+      options.push(`<option value="${chr}">Chr${chr}</option>`);
+    });
+  return options.join("");
+}
+
+function renumberRegionRows(){
+  document.querySelectorAll("#regionList .region-row").forEach((row, i)=>{
+    const title = row.querySelector(".region-row-title");
+    if(title) title.textContent = `Region ${i + 1}`;
+    const removeBtn = row.querySelector(".removeRegionBtn");
+    if(removeBtn) removeBtn.style.display = i === 0 ? "none" : "inline-flex";
+  });
+}
+
+function syncRegionChrOptions(chrMax = globalState.chrMax || {}){
+  document.querySelectorAll("#regionList .regionChr").forEach(select=>{
+    const current = select.value;
+    select.innerHTML = getRegionOptionHTML(chrMax);
+    select.value = current;
+  });
+}
+
+function createRegionHighlightRow(){
+  const list = document.getElementById("regionList");
+  const base = list.querySelector(".region-row");
+  if(!base) return;
+
+  const row = base.cloneNode(true);
+  row.removeAttribute("id");
+
+  row.querySelectorAll("[id]").forEach(el=>el.removeAttribute("id"));
+  row.querySelectorAll("input").forEach(input=>{
+    if(input.type === "checkbox") input.checked = false;
+    else if(input.type === "color"){
+      if(input.classList.contains("regionColor")) input.value = "#e11d48";
+      if(input.classList.contains("lineColor")) input.value = "#10b981";
+    } else {
+      input.value = "";
+    }
+  });
+
+  const select = row.querySelector(".regionChr");
+  if(select){
+    select.innerHTML = getRegionOptionHTML(globalState.chrMax || {});
+    select.value = "";
+  }
+
+  list.appendChild(row);
+  renumberRegionRows();
+}
+
+function getRegionHighlightSettings(){
+  return Array.from(document.querySelectorAll("#regionList .region-row"))
+    .map(row=>{
+      const chr = parseInt(row.querySelector(".regionChr")?.value);
+      const rawStart = +row.querySelector(".regionStart")?.value;
+      const rawEnd = +row.querySelector(".regionEnd")?.value;
+      const start = Math.min(rawStart, rawEnd);
+      const end = Math.max(rawStart, rawEnd);
+      const color = new THREE.Color(row.querySelector(".regionColor")?.value || "#e11d48");
+      const lineColor = new THREE.Color(row.querySelector(".lineColor")?.value || "#10b981");
+      const connect = !!row.querySelector(".drawLines")?.checked;
+
+      return { chr, start, end, color, lineColor, connect };
+    })
+    .filter(region =>
+      Number.isFinite(region.chr) &&
+      Number.isFinite(region.start) &&
+      Number.isFinite(region.end) &&
+      region.start > 0 &&
+      region.end > 0
+    );
+}
+
+function refreshRegionHighlights(){
+  // Region settings are intentionally applied only when Render is pressed.
+  // This avoids slow real-time redraws while users are editing multiple regions.
+}
+
+function initRegionHighlightUI(){
+  renumberRegionRows();
+
+  const addBtn = document.getElementById("addRegionBtn");
+  if(addBtn){
+    addBtn.addEventListener("click", ()=>{
+      createRegionHighlightRow();
+    });
+  }
+
+  const list = document.getElementById("regionList");
+  if(list){
+    list.addEventListener("click", e=>{
+      if(!e.target.classList.contains("removeRegionBtn")) return;
+      const rows = list.querySelectorAll(".region-row");
+      if(rows.length <= 1) return;
+      e.target.closest(".region-row")?.remove();
+      renumberRegionRows();
+    });
+  }
 }
 
 /* ================= CSV ================= */
@@ -364,18 +538,7 @@ function buildChrCheckboxes(chrMax){
       container.appendChild(wrapper);
     });
 
-  const chrSelect = document.getElementById("regionChr");
-chrSelect.innerHTML = '<option value="">Chr</option>';
-
-Object.keys(chrMax)
-  .map(Number)
-  .sort((a,b)=>a-b)
-  .forEach(chr=>{
-    const opt = document.createElement("option");
-    opt.value = chr;
-    opt.textContent = `Chr${chr}`;
-    chrSelect.appendChild(opt);
-  });
+  syncRegionChrOptions(chrMax);
 }
 
 // チェックされている染色体番号を取得
@@ -388,7 +551,7 @@ function getSelectedChromosomes(){
 
 /* ================= text ================= */
 
-function makeTextSprite(message, fontSize){
+function makeTextSprite(message, fontSize, color = getThemeSettings().textColor){
   const RESOLUTION_SCALE = 4;
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
@@ -401,7 +564,7 @@ function makeTextSprite(message, fontSize){
   canvas.height = drawSize * 1.5;
 
   ctx.font = `${drawSize}px Arial`;
-  ctx.fillStyle = "#000";
+  ctx.fillStyle = color;
   ctx.textBaseline = "middle";
   ctx.fillText(message, drawSize*0.5, canvas.height/2);
 
@@ -442,6 +605,7 @@ function draw2DManhattan(container, dataset, index, state, filename) {
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext("2d");
+  const theme = state.theme || getThemeSettings();
 
   const {
     BP_SCALE,
@@ -469,12 +633,12 @@ function draw2DManhattan(container, dataset, index, state, filename) {
   const yScalePx = plotH / yMax;
 
   ctx.clearRect(0,0,W,H);
-  ctx.fillStyle = "#fff";
+  ctx.fillStyle = theme.plotBackground;
   ctx.fillRect(0,0,W,H);
 
   /* ===== 軸 ===== */
 
-  ctx.strokeStyle = "#000";
+  ctx.strokeStyle = theme.axisColor;
   ctx.lineWidth = 1;
 
   // X axis
@@ -490,7 +654,7 @@ function draw2DManhattan(container, dataset, index, state, filename) {
   ctx.stroke();
 
   ctx.font = `${labelSize2D}px sans-serif`;
-  ctx.fillStyle = "#000";
+  ctx.fillStyle = theme.textColor;
 
   /* ===== Y ticks & labels ===== */
   for(let l=0; l<=10; l+=2){
@@ -509,7 +673,7 @@ function draw2DManhattan(container, dataset, index, state, filename) {
 
   /* ===== LOD line ===== */
   const lodY = H - PAD_B - lodLine * yScale * yScalePx;
-  ctx.strokeStyle = "red";
+  ctx.strokeStyle = theme.thresholdLineColor;
   ctx.setLineDash([4,3]);
   ctx.beginPath();
   ctx.moveTo(PAD_L, lodY);
@@ -555,12 +719,12 @@ dataset.forEach(p=>{
   ctx.textAlign = "left";
   ctx.textBaseline = "top";
   ctx.font = "12px sans-serif";
-  ctx.fillStyle = "#000";
+  ctx.fillStyle = theme.textColor;
   ctx.font = "11px sans-serif";
-ctx.fillStyle = "rgba(255,255,255,0.85)";
+ctx.fillStyle = theme.titleBackground;
 ctx.fillRect(PAD_L-4, 0, ctx.measureText(filename).width+8, 16);
 
-ctx.fillStyle = "#000";
+ctx.fillStyle = theme.textColor;
 ctx.fillText(filename, PAD_L, 2);
 
   const wrap = document.createElement("div");
@@ -584,6 +748,9 @@ function drawAxes(
   lodLine
 ){
   axisGroup.clear();
+  const theme = globalState.theme || getThemeSettings();
+  const axisLineColor = new THREE.Color(theme.axisColor);
+  const thresholdLineColor = new THREE.Color(theme.thresholdLineColor);
 
   const BASE_Y_MAX = 10;   // LODの最大表示値（論理）
   const yMax = BASE_Y_MAX * yScale;
@@ -601,7 +768,7 @@ function drawAxes(
         new THREE.Vector3(0, -axisOffset, z),
         new THREE.Vector3(totalLength, -axisOffset, z)
       ]),
-      new THREE.LineBasicMaterial({color:0x000000})
+      new THREE.LineBasicMaterial({color: axisLineColor})
     ));
 
     /* ----- X ticks (下向き) ----- */
@@ -618,7 +785,7 @@ function drawAxes(
             new THREE.Vector3(x, -axisOffset, z),                       // 軸上
             new THREE.Vector3(x, -axisOffset - X_TICK_LENGTH, z)        // 下向き
             ]),
-            new THREE.LineBasicMaterial({ color: 0x000000 })
+            new THREE.LineBasicMaterial({ color: axisLineColor })
         ));
     });
 
@@ -628,7 +795,7 @@ function drawAxes(
         new THREE.Vector3(-axisOffset, 0, z),
         new THREE.Vector3(-axisOffset, yMax, z)
       ]),
-      new THREE.LineBasicMaterial({color:0x000000})
+      new THREE.LineBasicMaterial({color: axisLineColor})
     ));
 
     /* ----- Y ticks (外向き) ----- */
@@ -643,11 +810,11 @@ function drawAxes(
             new THREE.Vector3(-axisOffset, y, z),                 // 軸上
             new THREE.Vector3(-axisOffset - TICK_LENGTH, y, z)    // 外側
             ]),
-            new THREE.LineBasicMaterial({ color: 0x000000 })
+            new THREE.LineBasicMaterial({ color: axisLineColor })
         ));
 
         // --- 数値ラベル（さらに外側） ---
-        const lbl = makeTextSprite(String(l), labelSize);
+        const lbl = makeTextSprite(String(l), labelSize, theme.textColor);
         lbl.position.set(
             -axisOffset - TICK_LENGTH - labelOffset,
             y,
@@ -662,7 +829,7 @@ function drawAxes(
             new THREE.Vector3(totalLength, lodY, z)
         ]),
         new THREE.LineBasicMaterial({
-            color: 0xff0000,
+            color: thresholdLineColor,
             linewidth: 1   // 見た目用（後で太さはBox化）
         })
     ));
@@ -675,7 +842,7 @@ function drawAxes(
       const xStart = start * BP_SCALE;
 
       // Chr label
-      const chrLbl = makeTextSprite(`Chr${chr}`, labelSize);
+      const chrLbl = makeTextSprite(`Chr${chr}`, labelSize, theme.textColor);
       chrLbl.position.set(center, -axisOffset - labelOffset, z);
       axisGroup.add(chrLbl);
 
@@ -746,6 +913,7 @@ colAttr.needsUpdate = true;
 
 
   /* ===== Axis ===== */
+  globalState.zSpacing = zSpacing;
   globalState.yScale = yScale;
   globalState.labelSize = labelSize;
   globalState.axisOffset = axisOffset;
@@ -753,6 +921,8 @@ colAttr.needsUpdate = true;
   globalState.lodLine = lodLine;
   globalState.oddColor = oddColor;
   globalState.evenColor = evenColor;
+  applyTheme();
+  globalState.theme = getThemeSettings();
   globalState.thresholdHighlight = getThresholdHighlightSettings();
   globalState.snpIdHighlight = getSnpIdHighlightSettings();
 
@@ -769,6 +939,8 @@ colAttr.needsUpdate = true;
     yScale,
     lodLine
   );
+
+  applyRegionOnly();
 
   /* ===== 2D 再描画 ===== */
   const panel2d = document.getElementById("panel2d");
@@ -854,11 +1026,13 @@ const {
 
 globalState = {
   BP_SCALE,
+  zSpacing,
   yScale,
   oddColor,
   evenColor,
   thresholdHighlight: getThresholdHighlightSettings(),
   snpIdHighlight: getSnpIdHighlightSettings(),
+  regions: getRegionHighlightSettings(),
 
   labelSize,
   axisOffset,
@@ -869,6 +1043,7 @@ globalState = {
   selectedChrs,
   totalLengthSelected,
   chrMax,
+  theme: getThemeSettings(),
 
 
 };
@@ -979,80 +1154,61 @@ globalActiveDatasets.forEach((ds, i)=>{
 
 
 function applyRegionOnly(){
-  if(!points) return;
+  if(!points || !geometry) return;
 
-  const drawLines = document.getElementById("drawLines").checked;
   lineGroup.clear();
-
-  const chr   = parseInt(regionChr.value);
-  const start = +regionStart.value;
-  const end   = +regionEnd.value;
-  const color = new THREE.Color(regionColor.value);
-  const lineColor = new THREE.Color(
-    document.getElementById("lineColor").value
-  );
-
-  if(!chr || !start || !end) return;
+  const regions = globalState.regions || [];
 
   const meta = points.userData.meta;
   const posAttr = geometry.getAttribute("position");
-  const colAttr = geometry.getAttribute("color");
 
-  const numDatasets = +csvCount.textContent;
+  const numDatasets = globalActiveDatasets.length || +csvCount.textContent;
   const zSpacing = +document.getElementById("zSpacing").value;
 
-  const snpMap = new Map();
+  regions.forEach(region=>{
+    if(!region.connect) return;
 
-  meta.forEach((m,i)=>{
-    if(m.chr === chr && m.bp >= start && m.bp <= end){
-      
+    const snpMap = new Map();
 
-      const z = posAttr.getZ(i);
-      const d = Math.round(z / zSpacing + (numDatasets-1)/2);
-      const key = `${m.chr}_${m.bp}`;
+    meta.forEach((m,i)=>{
+      if(m.chr === region.chr && m.bp >= region.start && m.bp <= region.end){
+        const z = posAttr.getZ(i);
+        const d = Math.round(z / zSpacing + (numDatasets-1)/2);
+        const key = `${m.chr}_${m.bp}`;
 
-      if(!snpMap.has(key)) snpMap.set(key, []);
-      snpMap.get(key).push({
-        x: posAttr.getX(i),
-        y: posAttr.getY(i),
-        z: z,
-        d: d
+        if(!snpMap.has(key)) snpMap.set(key, []);
+        snpMap.get(key).push({
+          x: posAttr.getX(i),
+          y: posAttr.getY(i),
+          z,
+          d
+        });
+      }
+    });
+
+    snpMap.forEach(list=>{
+      if(list.length < 2) return;
+      list.sort((a,b)=>a.d-b.d);
+
+      const curve = new THREE.CatmullRomCurve3(
+        list.map(p => new THREE.Vector3(p.x, p.y, p.z))
+      );
+
+      const radius = 0.2;
+      const tubeGeom = new THREE.TubeGeometry(
+        curve,
+        64,
+        radius,
+        8,
+        false
+      );
+
+      const tubeMat = new THREE.MeshBasicMaterial({
+        color: region.lineColor
       });
-    }
-  });
 
-  
-
-  globalState.region = { chr, start, end, color };
-
-  if(!drawLines) return;
-
-  snpMap.forEach(list=>{
-    if(list.length < 2) return;
-    list.sort((a,b)=>a.d-b.d);
-
-    const geom = new THREE.BufferGeometry().setFromPoints(
-      list.map(p=>new THREE.Vector3(p.x,p.y,p.z))
-    );
-const curve = new THREE.CatmullRomCurve3(
-  list.map(p => new THREE.Vector3(p.x, p.y, p.z))
-);
-
-// ===== drawLines の太さはここ =====
-const radius = 0.2;   // ← 太さ（Mb スケールに応じて調整）
-const tubeGeom = new THREE.TubeGeometry(
-  curve,
-  64,    // segments
-  radius,
-  8,     // radial segments
-  false
-);
-
-const tubeMat = new THREE.MeshBasicMaterial({
-  color: lineColor
-});
-
-lineGroup.add(new THREE.Mesh(tubeGeom, tubeMat));
+      lineGroup.add(new THREE.Mesh(tubeGeom, tubeMat));
+    });
   });
 }
 
@@ -1063,33 +1219,25 @@ document.getElementById("panVertical").addEventListener("input", (e)=>{
   applyCameraPan();
 });
 
+const themeToggle = document.getElementById("themeToggle");
+if(themeToggle){
+  themeToggle.addEventListener("change", refreshThemeOnly);
+}
+
 document.getElementById("panHorizontal").addEventListener("input", (e)=>{
   cameraPanState.horizontal = +e.target.value;
   applyCameraPan();
 });
 
 
-[
-  "lodLine",
-  "useThresholdHighlight",
-  "thresholdHighlightColor",
-  "useSnpIdHighlight",
-  "snpIdHighlightColor",
-  "snpIdList"
-].forEach(id=>{
-  const el = document.getElementById(id);
-  if(!el) return;
+/*
+  Threshold line / threshold highlight / SNP ID highlight are intentionally
+  NOT updated in real time. Their current UI values are read and applied only
+  when the Render button is pressed. This avoids expensive redraws while users
+  are typing SNP IDs or adjusting highlight settings.
+*/
 
-  const eventName = (el.type === "checkbox" || el.type === "color")
-    ? "change"
-    : (el.tagName === "TEXTAREA" ? "input" : "input");
-
-  el.addEventListener(eventName, ()=>{
-    if(!points || !geometry) return;
-    applyStyle();
-  });
-});
-
+initRegionHighlightUI();
 applyCameraPan();
 
 

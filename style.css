@@ -307,3 +307,204 @@ textarea:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 2px rgba(37,99,235,0.15);
 }
+
+
+/* =========================================================
+   Multiple region highlight controls
+========================================================= */
+#regionList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.region-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.7);
+}
+
+.region-row-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.region-row-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.removeRegionBtn {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+#addRegionBtn {
+  margin-top: 2px;
+}
+
+
+
+/* =========================================================
+   Theme Switch
+========================================================= */
+.theme-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  cursor: pointer;
+  opacity: 1;
+}
+
+.theme-switch input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.theme-slider {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  background: #cbd5e1;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.18);
+  transition: background 0.18s ease;
+}
+
+.theme-slider::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  transition: transform 0.18s ease;
+}
+
+.theme-switch input:checked + .theme-slider {
+  background: #2563eb;
+}
+
+.theme-switch input:checked + .theme-slider::before {
+  transform: translateX(20px);
+}
+
+.theme-switch input:focus + .theme-slider {
+  box-shadow:
+    inset 0 1px 3px rgba(0,0,0,0.18),
+    0 0 0 2px rgba(37,99,235,0.18);
+}
+
+.theme-switch-text {
+  font-size: 13px;
+  color: #374151;
+}
+
+/* =========================================================
+   Dark Mode
+========================================================= */
+body[data-theme="dark"] {
+  background: #020617;
+  color: #e5e7eb;
+}
+
+body[data-theme="dark"] #controls {
+  background: linear-gradient(180deg, #111827 0%, #020617 100%);
+  border-right-color: #334155;
+  box-shadow: 2px 0 8px rgba(0,0,0,0.35);
+}
+
+body[data-theme="dark"] #sidebarLogo {
+  background: #0f172a;
+  border-bottom-color: #334155;
+}
+
+body[data-theme="dark"] label,
+body[data-theme="dark"] .file-status,
+body[data-theme="dark"] #info {
+  color: #e5e7eb;
+}
+
+body[data-theme="dark"] input,
+body[data-theme="dark"] select,
+body[data-theme="dark"] textarea {
+  color: #f9fafb;
+  background: #0f172a;
+  border-color: #475569;
+}
+
+body[data-theme="dark"] input:focus,
+body[data-theme="dark"] select:focus,
+body[data-theme="dark"] textarea:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 2px rgba(96,165,250,0.20);
+}
+
+body[data-theme="dark"] .drop-zone {
+  background: #0f172a;
+  border-color: #475569;
+}
+
+body[data-theme="dark"] .drop-zone:hover,
+body[data-theme="dark"] .drop-zone.dragover {
+  background: #1e293b;
+  border-color: #60a5fa;
+}
+
+body[data-theme="dark"] .drop-zone-text {
+  color: #e5e7eb;
+}
+
+body[data-theme="dark"] #canvas {
+  background: #0f172a;
+}
+
+body[data-theme="dark"] #panel2d {
+  background: linear-gradient(180deg, #111827 0%, #020617 100%);
+  border-left-color: #334155;
+  box-shadow: -2px 0 8px rgba(0,0,0,0.35);
+}
+
+body[data-theme="dark"] .manhattan2d {
+  border-bottom-color: #334155;
+}
+
+body[data-theme="dark"] .manhattan2d canvas {
+  background: #0f172a;
+  box-shadow:
+    0 1px 3px rgba(0,0,0,0.45),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+body[data-theme="dark"] .region-row {
+  background: rgba(15,23,42,0.72);
+  border-color: #334155;
+}
+
+body[data-theme="dark"] .theme-switch-text {
+  color: #e5e7eb;
+}
+
+body[data-theme="dark"] .theme-slider {
+  background: #475569;
+}
+
+body[data-theme="dark"] .theme-switch input:checked + .theme-slider {
+  background: #60a5fa;
+}
